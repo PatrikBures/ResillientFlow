@@ -1,0 +1,7 @@
+include:
+  - repo: gh:bluetext-io/bluetext
+  - modules/server
+tools:
+  default:
+    run:
+      - tool: "server"
