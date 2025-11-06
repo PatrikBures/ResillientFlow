@@ -14,13 +14,14 @@ document.addEventListener("DOMContentLoaded", () => {
         { id: "step-7", name: "Local Delivery" },
         { id: "step-8", name: "Delivered" }
     ];
+    // 👇 SCENARIOS OBJECT IS UPDATED
     const scenarios = {
         "ESTONIA_OK": { name: "The 'EU Standard' Box", price: "99" },
         "CHINA_CUSTOMS_FAIL": { name: "The 'Far East' Box", price: "199" },
-        "ESTONIA_FAIL_REROUTE": { name: "The 'Volatile Stock' Box", price: "149" },
+        "HIGH_DEMAND_STOCK_FAIL": { name: "The 'Volatile Stock' Box", price: "149" }, // Renamed
         "CHINA_CRISIS_FAIL": { name: "The 'High Risk' Box", price: "499" },
         "LAB_FAIL_SCREWS": { name: "The 'High-Spec' Box", price: "399" },
-        "SHIPPING_DELAY": { name: "The 'Rush Order' Box", price: "349" },
+        "LOGISTICS_JAM_DELAY": { name: "The 'Rush Order' Box", price: "349" }, // Renamed
         "QUALITY_FAIL": { name: "The 'Premium Quality' Box", price: "299" },
         "CARRIER_BANKRUPTCY": { name: "The 'Budget Shipping' Box", price: "129" },
         "CURRENCY_VOLATILITY": { name: "The 'International Value' Box", price: "259" }
@@ -151,40 +152,45 @@ For future "High Risk" orders, consider automatically offering the customer two 
 
         // Don't re-log the same status
         if (status === lastLoggedStatus) return;
+        
+        // Log the raw status message, no matter what it is.
+        log(`Status update: ${status}`);
         lastLoggedStatus = status;
 
+        // Handle UI updates based on status
         if (status.startsWith("At Step:")) {
             const stepName = status.replace("At Step: ", "");
             const stepIndex = steps.findIndex(s => s.name === stepName);
-            log(`Progress: Now at step '${stepName}'`);
             updateUI(stepIndex, 'active');
         
         } else if (status === "PAUSED: WAITING_FOR_LAB_DECISION") {
-            log("🔬 CRITICAL FAILURE: Lab inspection failed.", 'error');
-            log("🛑 WORKFLOW PAUSED. Awaiting management decision.", 'warn');
             const errorStepIndex = steps.findIndex(s => s.name === "Packaged (Factory)");
             updateUI(errorStepIndex, 'error');
             stopStatusPolling();
             labModalOverlay.style.display = "flex"; // Show Modal 2
             
         } else if (status === "PAUSED: WAITING_FOR_CRISIS_DECISION") {
-            log("⚠️ CRITICAL ERROR: Transport route blocked.", 'error');
-            log("🛑 WORKFLOW PAUSED. Awaiting human intervention.", 'warn');
             const errorStepIndex = steps.findIndex(s => s.name === "Transport Started");
             updateUI(errorStepIndex, 'error');
             stopStatusPolling();
             modalOverlay.style.display = "flex"; // Show Modal 1
 
         } else if (status === "Completed" || status === "WORKFLOW_EXECUTION_STATUS_COMPLETED") {
-            log("🎉 Order completed successfully!", 'success');
             stopStatusPolling();
             updateUI(steps.length, 'completed');
             decrementStock(); // Decrement inventory on completion
             clearWorkflowState(false);
         
         } else if (status.includes("FAILED") || status.includes("TIMED_OUT")) {
-            log(`Workflow ended in non-success state: ${status}`, 'error');
             stopStatusPolling();
+        
+        } else if (status.startsWith("RECOVERY:")) {
+            // Special state for logging recovery actions
+            const stepName = status.split(" ")[1]; // e.g., "RECOVERY: Warehouse" -> "Warehouse"
+            const stepIndex = steps.findIndex(s => s.name.includes(stepName));
+            if (stepIndex > -1) {
+                updateUI(stepIndex, 'warning'); // Show recovery as a "warning" state
+            }
         }
     }
 
@@ -205,16 +211,16 @@ For future "High Risk" orders, consider automatically offering the customer two 
     async function startWorkflow() {
         log("Initializing workflow...");
         retryButton.style.display = "none";
+        logOutput.innerHTML = ""; // Clear log on new start
+        updateUI(-1); // Reset UI
 
         const scenario = sessionStorage.getItem(SCENARIO_KEY);
 
         // Check if we have an existing workflow to resume
         const existingWorkflowId = localStorage.getItem(WORKFLOW_ID_KEY);
         if (existingWorkflowId) {
-            currentWorkflowId = existingWorkflowId;
-            log(`Resuming polling for existing workflow: ${currentWorkflowId}`, 'warn');
-            startStatusPolling(); // Just start polling, it will find its state
-            return;
+            // This logic is tricky, better to just start fresh.
+            clearWorkflowState(true);
         }
 
         // Create new order by calling the backend

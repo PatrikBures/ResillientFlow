@@ -11,6 +11,7 @@
     "dev:server": "nodemon --watch src --exec ts-node src/server.ts"
   },
   "dependencies": {
+    "@temporalio/activity": "^1.13.1",
     "@temporalio/client": "^1.8.6",
     "@temporalio/worker": "^1.8.6",
     "cors": "^2.8.5",

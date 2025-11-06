@@ -29,7 +29,7 @@
                     <input type="radio" id="scenario-estonia-ok" name="scenario" value="ESTONIA_OK" checked>
                     <label for="scenario-estonia-ok">
                         🇪🇺 The "EU Standard" Box ($99)
-                        <span><b>Scenario:</b> Successful flow. Ships from Estonia.</span>
+                        <span><b>Scenario:</b> Successful flow. Ships from Estonia. (Happy Path)</span>
                     </label>
                 </div>
 
@@ -37,15 +37,15 @@
                     <input type="radio" id="scenario-china-customs" name="scenario" value="CHINA_CUSTOMS_FAIL">
                     <label for="scenario-china-customs">
                         🌏 The "Far East" Box ($199)
-                        <span><b>Scenario:</b> Customs issues. Stuck at customs, resolves after automatic retry.</span>
+                        <span><b>Scenario:</b> Customs issues. Stuck at customs, resolves after <u>automatic retry</u>.</span>
                     </label>
                 </div>
 
                 <div class="form-group-radio">
-                    <input type="radio" id="scenario-reroute" name="scenario" value="ESTONIA_FAIL_REROUTE">
+                    <input type="radio" id="scenario-reroute" name="scenario" value="HIGH_DEMAND_STOCK_FAIL">
                     <label for="scenario-reroute">
                         🔄 The "Volatile Stock" Box ($149)
-                        <span><b>Scenario:</b> Warehouse Error & Rerouting. Stock in Estonia is 0. Flow automatically redirects order to China factory.</span>
+                        <span><b>Scenario:</b> High-Demand Stock Failure. Stock in Estonia is 0. Flow <u>automatically redirects</u> order to China factory.</span>
                     </label>
                 </div>
 
@@ -61,15 +61,15 @@
                     <input type="radio" id="scenario-lab-fail" name="scenario" value="LAB_FAIL_SCREWS">
                     <label for="scenario-lab-fail">
                         🔩 The "High-Spec" Box ($399)
-                        <span><b>Scenario:</b> Lab inspection failure on a critical component (screws). Requires <u>human intervention</u> from management.</span>
+                        <span><b>Scenario:</b> Lab inspection failure on a critical component. Requires <u>human intervention</u> from management.</span>
                     </label>
                 </div>
 
                 <div class="form-group-radio">
-                    <input type="radio" id="scenario-delay" name="scenario" value="SHIPPING_DELAY">
+                    <input type="radio" id="scenario-delay" name="scenario" value="LOGISTICS_JAM_DELAY">
                     <label for="scenario-delay">
                         ⏰ The "Rush Order" Box ($349)
-                        <span><b>Scenario:</b> Shipping congestion detected. System automatically upgrades to express shipping (+$50 surcharge).</span>
+                        <span><b>Scenario:</b> Logistics Jam (e.g., major traffic accident). System <u>automatically upgrades</u> to express shipping.</span>
                     </label>
                 </div>
 
@@ -77,7 +77,7 @@
                     <input type="radio" id="scenario-quality" name="scenario" value="QUALITY_FAIL">
                     <label for="scenario-quality">
                         🔍 The "Premium Quality" Box ($299)
-                        <span><b>Scenario:</b> Quality inspection failure. Automatic product recall and replacement with certified batch.</span>
+                        <span><b>Scenario:</b> Quality inspection failure. <u>Automatic product recall</u> and replacement with certified batch.</span>
                     </label>
                 </div>
 
@@ -85,7 +85,7 @@
                     <input type="radio" id="scenario-carrier" name="scenario" value="CARRIER_BANKRUPTCY">
                     <label for="scenario-carrier">
                         💸 The "Budget Shipping" Box ($129)
-                        <span><b>Scenario:</b> Shipping carrier bankruptcy. Automatic switch to alternative carrier with cost adjustment.</span>
+                        <span><b>Scenario:</b> Shipping carrier bankruptcy. <u>Automatic switch</u> to alternative carrier with cost adjustment.</span>
                     </label>
                 </div>
 
@@ -93,7 +93,7 @@
                     <input type="radio" id="scenario-currency" name="scenario" value="CURRENCY_VOLATILITY">
                     <label for="scenario-currency">
                         💱 The "International Value" Box ($259)
-                        <span><b>Scenario:</b> Currency exchange rate volatility. Payment automatically adjusted to protect margins.</span>
+                        <span><b>Scenario:</b> Currency exchange rate volatility. Payment <u>automatically adjusted</u> to protect margins.</span>
                     </label>
                 </div>
 
