@@ -1,473 +1,462 @@
 document.addEventListener("DOMContentLoaded", () => {
-    console.log("DOM Loaded. Initializing Real Workflow Client...");
 
-    // --- Configuration ---\
-    const API_BASE_URL = "http://localhost:3030";
-    const POLLING_INTERVAL_MS = 2000; // Poll every 2 seconds
-    const SCENARIO_KEY = "config_scenario";
-    const WORKFLOW_ID_KEY = "current_workflow_id";
-    const CUSTOMER_KEY = "config_customer";
+    // --- Configuration ---
+    const API_BASE_URL = "http://localhost:5000"; // REAL Backend API URL
+    const POLLING_INTERVAL = 2000; // Poll status every 2 seconds
 
-    // Step definition matching the frontend and workflow state
     const steps = [
-        { id: "step-1", name: "Order Received", stepName: "OrderReceived" },
-        { id: "step-2", name: "Payment OK", stepName: "PaymentOK" },
-        { id: "step-3", name: "Warehouse Allocation", stepName: "WarehouseAllocation" },
-        // Special intervention step
-        { id: "step-i", name: "Intervention Required", stepName: "InterventionRequired" },
-        { id: "step-4", name: "Packaged (Factory)", stepName: "Packaged" },
-        { id: "step-5", name: "Transport Started", stepName: "TransportStarted" },
-        { id: "step-6", name: "Customs Clearance", stepName: "CustomsClearance" },
-        { id: "step-7", name: "Local Delivery", stepName: "LocalDelivery" },
-        { id: "step-8", name: "Delivered", stepName: "Delivered" },
-        // Special failure step
-        { id: "step-f", name: "Workflow Failed", stepName: "Failed" },
+        { id: "step-1", name: "Order Received" },
+        { id: "step-2", name: "Payment OK" },
+        { id: "step-3", name: "Warehouse Allocation" },
+        { id: "step-4", name: "Packaged (Factory)" },
+        { id: "step-5", name: "Transport Started" },
+        { id: "step-6", name: "Customs Clearance" },
+        { id: "step-7", name: "Local Delivery" },
+        { id: "step-8", name: "Delivered" }
     ];
-    
-    // Scenario definitions (from your original file)
     const scenarios = {
         "ESTONIA_OK": { name: "The 'EU Standard' Box", price: "99" },
         "CHINA_CUSTOMS_FAIL": { name: "The 'Far East' Box", price: "199" },
         "ESTONIA_FAIL_REROUTE": { name: "The 'Volatile Stock' Box", price: "149" },
-        "CHINA_CRISIS_FAIL": { name: "The 'Warzone' Box", price: "499" }
+        "CHINA_CRISIS_FAIL": { name: "The 'High Risk' Box", price: "499" },
+        "LAB_FAIL_SCREWS": { name: "The 'High-Spec' Box", price: "399" },
+        "SHIPPING_DELAY": { name: "The 'Rush Order' Box", price: "349" },
+        "QUALITY_FAIL": { name: "The 'Premium Quality' Box", price: "299" },
+        "CARRIER_BANKRUPTCY": { name: "The 'Budget Shipping' Box", price: "129" },
+        "CURRENCY_VOLATILITY": { name: "The 'International Value' Box", price: "259" }
     };
+    const BASE_DATE = new Date(); // Start date for all calculations
 
-    // --- DOM Elements ---
-    // Views
-    const configView = document.getElementById("config-view");
-    const workflowView = document.getElementById("workflow-view");
+    // --- State Keys (Persistent browser state) ---
+    const SCENARIO_KEY = "workflow_scenario";
+    const WORKFLOW_ID_KEY = "current_workflow_id";
 
-    // Config View
-    const configForm = document.getElementById("config-form");
-    const customerNameInput = document.getElementById("customer-name");
-    const startWorkflowButton = document.getElementById("start-workflow-button");
-
-    // Workflow View
-    const workflowStepsContainer = document.getElementById("workflow-steps");
+    // --- Element References ---
+    const views = {
+        config: document.getElementById("config-view"),
+        checkout: document.getElementById("checkout-view"),
+        workflow: document.getElementById("workflow-view")
+    };
+    const logOutput = document.getElementById("log-output");
+    const retryButton = document.getElementById("retryButton");
+    const resetButton = document.getElementById("resetButton");
     const deliveryDateEl = document.getElementById("delivery-date");
-    const logContainer = document.getElementById("log-container");
-    const logEntries = document.getElementById("log-entries");
-    const retryButton = document.getElementById("start-again-button"); // "Start a New Order"
-    const resetButton = document.getElementById("reset-button");
-
-    // Modal
-    const modal = document.getElementById("modal-overlay");
-    const modalTitle = document.getElementById("modal-title");
-    const modalMessage = document.getElementById("modal-message");
-    const modalForm = document.getElementById("intervention-form");
+    const modalOverlay = document.getElementById("intervention-modal-overlay");
     const confirmInterventionButton = document.getElementById("confirm-intervention-button");
-    
-    // Inventory
-    const inventoryDisplay = document.getElementById('inventory-display');
+    const labModalOverlay = document.getElementById("lab-modal-overlay");
+    const confirmLabButton = document.getElementById("confirm-lab-button");
 
-    // --- State ---
+
+    // --- Helper Functions ---
+
+    function showView(viewId) {
+        for (const key in views) {
+            views[key].style.display = (key === viewId) ? "block" : "none";
+        }
+    }
+
+    function log(message, type = 'info') {
+        let prefix = "ℹ️";
+        if (type === 'success') prefix = "✅";
+        if (type === 'error') prefix = "❌";
+        if (type === 'warn') prefix = "⚠️";
+
+        const logEntry = document.createElement('div');
+        logEntry.className = 'log-entry';
+        logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${prefix} ${message}`;
+        if(type === 'suggestion') {
+            logEntry.classList.add('log-suggestion');
+        }
+
+        logOutput.prepend(logEntry);
+    }
+
+    function logBusinessSuggestion(cost, solution) {
+        log(`Business suggestion generated based on manual action:`, 'suggestion');
+        const message = `
+SUGGESTION: The selected option (${solution}) increased the cost by ${cost}%.
+For future "High Risk" orders, consider automatically offering the customer two choices at checkout...
+(This logic is now client-side, triggered by the modal action)`;
+        const logEntry = document.createElement('div');
+        logEntry.className = 'log-entry log-suggestion';
+        logEntry.style.whiteSpace = "pre-wrap";
+        logEntry.style.fontFamily = "monospace";
+        logEntry.textContent = message;
+        logOutput.prepend(logEntry);
+    }
+
+    function formatDate(date) {
+        return date.toLocaleDateString("en-US", {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+        });
+    }
+
+    function updateDeliveryDate(daysToAdd) {
+        const newDate = new Date(BASE_DATE.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
+        localStorage.setItem("delivery_date", newDate.toISOString());
+        deliveryDateEl.textContent = formatDate(newDate);
+        return newDate;
+    }
+
+    function updateUI(currentStepIndex, state = 'active') {
+        steps.forEach((step, index) => {
+            const el = document.getElementById(step.id);
+            if (!el) return;
+            el.classList.remove("active", "completed", "error", "warning");
+
+            if (index < currentStepIndex) {
+                el.classList.add("completed");
+            } else if (index === currentStepIndex) {
+                el.classList.add(state);
+            }
+        });
+    }
+
+    // --- Workflow State ---
     let currentWorkflowId = null;
-    let pollIntervalId = null;
-    let lastLoggedStep = null; // To prevent duplicate log entries
-    let lastKnownStep = null; // To track state changes
-
-    // --- Core Functions ---
+    let statusPollingInterval = null;
+    let lastLoggedStatus = "";
 
     /**
-     * UPDATED: This function now *only* starts a workflow.
-     * It no longer handles resetting.
+     * Start polling the backend for workflow status
      */
-    async function startWorkflow(event) {
-        event.preventDefault();
+    function startStatusPolling() {
+        if (statusPollingInterval) {
+            clearInterval(statusPollingInterval);
+        }
 
-        const formData = new FormData(configForm);
-        const customerNameValue = formData.get("customer-name");
-        const customerName = customerNameValue ? customerNameValue.trim() : "";
-        const scenario = formData.get("scenario");
+        statusPollingInterval = setInterval(async () => {
+            if (!currentWorkflowId) return;
+            try {
+                await pollWorkflowStatus(); // This is the new REAL version
+            } catch (error) {
+                log(`Status polling error: ${error.message}`, 'error');
+                stopStatusPolling();
+            }
+        }, POLLING_INTERVAL);
+    }
 
-        if (!customerName || !scenario) {
-            alert("Please fill in all fields.");
+    /**
+     * Poll the backend API for the current workflow status
+     */
+    async function pollWorkflowStatus() {
+        if (!currentWorkflowId) return;
+
+        const response = await fetch(`${API_BASE_URL}/api/status/${currentWorkflowId}`);
+        if (!response.ok) {
+            throw new Error(`API error: ${response.statusText}`);
+        }
+        const data = await response.json();
+        const status = data.status;
+
+        // Don't re-log the same status
+        if (status === lastLoggedStatus) return;
+        lastLoggedStatus = status;
+
+        if (status.startsWith("At Step:")) {
+            const stepName = status.replace("At Step: ", "");
+            const stepIndex = steps.findIndex(s => s.name === stepName);
+            log(`Progress: Now at step '${stepName}'`);
+            updateUI(stepIndex, 'active');
+        
+        } else if (status === "PAUSED: WAITING_FOR_LAB_DECISION") {
+            log("🔬 CRITICAL FAILURE: Lab inspection failed.", 'error');
+            log("🛑 WORKFLOW PAUSED. Awaiting management decision.", 'warn');
+            const errorStepIndex = steps.findIndex(s => s.name === "Packaged (Factory)");
+            updateUI(errorStepIndex, 'error');
+            stopStatusPolling();
+            labModalOverlay.style.display = "flex"; // Show Modal 2
+            
+        } else if (status === "PAUSED: WAITING_FOR_CRISIS_DECISION") {
+            log("⚠️ CRITICAL ERROR: Transport route blocked.", 'error');
+            log("🛑 WORKFLOW PAUSED. Awaiting human intervention.", 'warn');
+            const errorStepIndex = steps.findIndex(s => s.name === "Transport Started");
+            updateUI(errorStepIndex, 'error');
+            stopStatusPolling();
+            modalOverlay.style.display = "flex"; // Show Modal 1
+
+        } else if (status === "Completed" || status === "WORKFLOW_EXECUTION_STATUS_COMPLETED") {
+            log("🎉 Order completed successfully!", 'success');
+            stopStatusPolling();
+            updateUI(steps.length, 'completed');
+            decrementStock(); // Decrement inventory on completion
+            clearWorkflowState(false);
+        
+        } else if (status.includes("FAILED") || status.includes("TIMED_OUT")) {
+            log(`Workflow ended in non-success state: ${status}`, 'error');
+            stopStatusPolling();
+        }
+    }
+
+
+    /**
+     * Stop status polling
+     */
+    function stopStatusPolling() {
+        if (statusPollingInterval) {
+            clearInterval(statusPollingInterval);
+            statusPollingInterval = null;
+        }
+    }
+
+    /**
+     * Start workflow by calling the backend API
+     */
+    async function startWorkflow() {
+        log("Initializing workflow...");
+        retryButton.style.display = "none";
+
+        const scenario = sessionStorage.getItem(SCENARIO_KEY);
+
+        // Check if we have an existing workflow to resume
+        const existingWorkflowId = localStorage.getItem(WORKFLOW_ID_KEY);
+        if (existingWorkflowId) {
+            currentWorkflowId = existingWorkflowId;
+            log(`Resuming polling for existing workflow: ${currentWorkflowId}`, 'warn');
+            startStatusPolling(); // Just start polling, it will find its state
             return;
         }
 
-        log("Starting workflow... Contacting server.", "info");
-        startWorkflowButton.disabled = true;
-        startWorkflowButton.textContent = "Starting...";
-
+        // Create new order by calling the backend
         try {
-            const response = await fetch(`${API_BASE_URL}/start-workflow`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ customerName, scenario }),
+            const customerInfo = {
+                name: document.getElementById("name").value,
+                email: document.getElementById("email").value,
+                address: document.getElementById("address").value
+            };
+            
+            updateDeliveryDate(14); // Default estimate
+
+            log("📦 Creating order and starting Temporal workflow...");
+            const response = await fetch(`${API_BASE_URL}/api/start-workflow`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ scenario, customerInfo })
             });
 
             if (!response.ok) {
-                throw new Error(`Server error: ${response.statusText}`);
+                throw new Error(`API error: ${await response.text()}`);
             }
 
             const data = await response.json();
             currentWorkflowId = data.workflowId;
-
-            // Save state to resume session
             localStorage.setItem(WORKFLOW_ID_KEY, currentWorkflowId);
-            localStorage.setItem(CUSTOMER_KEY, customerName);
-            sessionStorage.setItem(SCENARIO_KEY, scenario);
 
-            log(`Workflow started successfully. ID: ${currentWorkflowId}`, "success");
-            
-            // Switch to workflow view and start polling
-            showView("workflow");
-            startStatusPolling();
+            log(`✅ Order created with real workflow ID: ${currentWorkflowId}`, 'success');
+            startStatusPolling(); // Start polling for status
 
         } catch (error) {
-            console.error("Failed to start workflow:", error);
-            log(`Failed to start workflow: ${error.message}`, "error");
-            startWorkflowButton.disabled = false;
-            startWorkflowButton.textContent = "Start Order";
+            log(`Could not start workflow: ${error.message}`, 'error');
+            retryButton.style.display = "inline-block";
         }
     }
 
     /**
-     * Polls the backend for the current workflow status
-     */
-    async function pollWorkflowStatus() {
-        if (!currentWorkflowId) {
-            stopStatusPolling();
-            return;
-        }
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/workflow-status/${currentWorkflowId}`);
-            
-            if (!response.ok) {
-                throw new Error(`Server poll failed: ${response.statusText} (${response.status})`);
-            }
-            
-            const state = await response.json();
-            
-            // --- This is the core UI update logic ---
-            
-            // Handle race condition where workflow is still starting
-            if (state.workflowExists === false) {
-                log("Workflow is initializing...", "info");
-                updateStepUI("OrderReceived"); // Keep UI on first step
-                return;
-            }
-            
-            // Update all step UIs based on the current step
-            updateStepUI(state.currentStep);
-            
-            // Handle logs
-            if (state.currentStep !== lastLoggedStep) {
-                const stepDef = steps.find(s => s.stepName === state.currentStep);
-                if (stepDef) {
-                    log(`Workflow moved to step: ${stepDef.name}`, "info");
-                    lastLoggedStep = state.currentStep;
-                }
-            }
-            
-            // Handle terminal states (Success, Failure)
-            if (state.workflowComplete) {
-                log("Workflow complete! Package delivered.", "success");
-                stopStatusPolling();
-                deliveryDateEl.textContent = state.deliveryDate ? formatDate(new Date(state.deliveryDate)) : "Completed";
-                if(state.deliveryDate) localStorage.setItem("delivery_date", state.deliveryDate);
-                if (retryButton) retryButton.style.display = "inline-block"; // Show "Try Again"
-            } else if (state.workflowFailed) {
-                log(`Workflow FAILED: ${state.failureMessage}`, "error");
-                stopStatusPolling();
-                if (retryButton) retryButton.style.display = "inline-block"; // Show "Try Again"
-            } else if (state.interventionNeeded) {
-                // Handle intervention
-                if (lastKnownStep !== 'InterventionRequired') {
-                    log("INTERVENTION REQUIRED. Workflow paused.", "warn");
-                    showInterventionModal(state.interventionData);
-                }
-            }
-            
-            lastKnownStep = state.currentStep;
-
-        } catch (error) {
-            console.error("Polling error:", error);
-            // UPDATED: Log to the UI, not just the console
-            log(`Polling error: ${error.message}. Retrying...`, "error");
-            // Don't stop polling, it might be a temporary network issue
-        }
-    }
-
-    /**
-     * Resets the entire workflow and clears state
-     */
-    async function resetWorkflow() {
-        log("Resetting workflow...", "warn");
-        stopStatusPolling();
-        clearWorkflowState(true); // Clear all state and reload
-    }
-
-    /**
-     * Submits the human intervention choice to the backend
+     * Handle manual intervention signal (Crisis Modal)
      */
     async function resumeWithManualInput() {
-        const formData = new FormData(modalForm);
-        const solution = formData.get("solution");
+        if (!currentWorkflowId) return;
+        
+        modalOverlay.style.display = "none"; // Hide modal 1
+        
+        const selectedSolution = document.querySelector('#intervention-form input[name="solution"]:checked');
+        const decisionData = {
+            choice: selectedSolution.value,
+            cost: selectedSolution.dataset.cost,
+            days: selectedSolution.dataset.days
+        };
 
-        if (!solution) {
-            alert("Please select a solution.");
-            return;
-        }
-
-        log(`Submitting intervention: ${solution}...`, "info");
-        confirmInterventionButton.disabled = true;
-
+        log(`Sending intervention signal: ${decisionData.choice}`, 'warn');
+        logBusinessSuggestion(decisionData.cost, decisionData.choice);
+        updateDeliveryDate(parseInt(decisionData.days));
+        
         try {
-            await fetch(`${API_BASE_URL}/submit-intervention`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ workflowId: currentWorkflowId, solution }),
+            // Send the signal to the backend
+            await fetch(`${API_BASE_URL}/api/signal/crisis/${currentWorkflowId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(decisionData)
             });
-
-            log("Intervention submitted. Workflow is resuming.", "success");
-            hideInterventionModal();
-
+            
+            log("✅ Signal sent. Resuming workflow...", 'success');
+            startStatusPolling(); // Resume polling to see progress
+            
         } catch (error) {
-            console.error("Failed to submit intervention:", error);
-            log(`Failed to submit intervention: ${error.message}`, "error");
-        } finally {
-            confirmInterventionButton.disabled = false;
+            log(`Failed to send signal: ${error.message}`, 'error');
         }
     }
-
-    // --- UI & Utility Functions ---
 
     /**
-     * Updates the workflow steps UI based on the current step name
+     * Handle manual intervention signal (Lab Modal)
      */
-    function updateStepUI(currentStepName) {
-        // Find the index of the *definition* of the current step
-        const currentStepDefIndex = steps.findIndex(s => s.stepName === currentStepName);
-        if (currentStepDefIndex === -1) {
-             console.warn(`Unknown step name: ${currentStepName}`);
-             return; // Unknown step
-        }
+    async function resumeFromLabInput() {
+        if (!currentWorkflowId) return;
 
-        // Get all the step elements from the DOM
-        const stepElements = workflowStepsContainer.querySelectorAll(".workflow-step");
+        labModalOverlay.style.display = "none"; // Hide modal 2
 
-        stepElements.forEach((stepEl, index) => {
-            // Find the definition for the *element* we are looking at
-            const stepElDef = steps.find(s => s.id === stepEl.id);
-            if (!stepElDef) return;
+        const selectedSolution = document.querySelector('#lab-form input[name="solution"]:checked');
+        const decisionData = {
+            choice: selectedSolution.value,
+            cost: selectedSolution.dataset.cost,
+            delayWeeks: selectedSolution.dataset.delay,
+            risk: selectedSolution.dataset.risk
+        };
 
-            // Find the *definition index* of the element we are looking at
-            const stepElDefIndex = steps.findIndex(s => s.id === stepEl.id);
-
-            stepEl.classList.remove("step-completed", "step-active", "step-failed", "step-intervention");
-            stepEl.style.display = ""; // Reset display property
-
-            if (currentStepDefIndex > stepElDefIndex) {
-                // This step is completed
-                stepEl.classList.add("step-completed");
-            } else if (currentStepDefIndex === stepElDefIndex) {
-                // This is the active step
-                if (currentStepName === "Failed") {
-                    stepEl.classList.add("step-failed");
-                } else if (currentStepName === "InterventionRequired") {
-                    stepEl.classList.add("step-intervention");
-                } else {
-                    stepEl.classList.add("step-active");
-                }
-            } else {
-                // This is a future step
-            }
-
-            // --- Handle visibility of special steps ---
-            const connEl = document.getElementById(`${stepEl.id}-conn`);
-
-            if (stepEl.id === "step-i") { // Intervention Step
-                if (currentStepName === "InterventionRequired" || (lastKnownStep === "InterventionRequired" && currentStepName === "WarehouseAllocation")) {
-                    stepEl.style.display = "flex";
-                    if(connEl) connEl.style.display = "";
-                } else {
-                    stepEl.style.display = "none";
-                    if(connEl) connEl.style.display = "none";
-                }
-            }
-             
-            if (stepEl.id === "step-f") { // Failed Step
-                if (currentStepName === "Failed") {
-                    stepEl.style.display = "flex";
-                     if(connEl) connEl.style.display = "";
-                } else {
-                    stepEl.style.display = "none";
-                     if(connEl) connEl.style.display = "none";
-                }
-            }
-        });
-    }
-
-    function showInterventionModal(data) {
-        // Populate and show the modal
-        modalTitle.textContent = `Intervention Required: ${data.errorCode}`;
-        modalMessage.textContent = data.message;
+        log(`Sending management decision: ${decisionData.choice}`, 'warn');
         
-        // Dynamically populate suggestions
-        const form = document.getElementById("intervention-form");
-        form.innerHTML = ""; // Clear old suggestions
+        // Log audit
+        const logMessage = `
+DECISION AUDIT LOG:
+- Choice: ${decisionData.choice}
+- Estimated Cost: $${decisionData.cost}M
+- Estimated Delay: ${decisionData.delayWeeks} weeks
+${decisionData.risk ? `- Accepted Risk: High (Est. $${decisionData.risk}M Liability)` : ''}
+        `;
+        log(logMessage, 'suggestion');
+
+        updateDeliveryDate(decisionData.delayWeeks * 7); 
         
-        data.suggestions.forEach((suggestion, index) => {
-            const choiceDiv = document.createElement("div");
-            choiceDiv.className = "intervention-choice";
-            
-            const input = document.createElement("input");
-            input.type = "radio";
-            input.id = `choice-${suggestion.id}`;
-            input.name = "solution";
-            input.value = suggestion.id;
-            if (index === 0) input.checked = true; // Default check the first one
-
-            const label = document.createElement("label");
-            label.htmlFor = `choice-${suggestion.id}`;
-            label.innerHTML = `
-                <strong>${suggestion.id.replace(/_/g, ' ')}</strong>
-                <span>Est. cost: +${suggestion.cost}%. Est. time: ${suggestion.days} days.</span>
-            `;
-            
-            choiceDiv.appendChild(input);
-            choiceDiv.appendChild(label);
-            form.appendChild(choiceDiv);
-        });
-        
-        modal.style.display = "flex";
-    }
-
-    function hideInterventionModal() {
-        modal.style.display = "none";
-    }
-
-    function clearWorkflowState(reload = false) {
-        localStorage.removeItem(WORKFLOW_ID_KEY);
-        localStorage.removeItem(CUSTOMER_KEY);
-        localStorage.removeItem("delivery_date");
-        sessionStorage.removeItem(SCENARIO_KEY);
-        currentWorkflowId = null;
-        lastLoggedStep = null;
-        lastKnownStep = null;
-        if (reload) {
-            window.location.reload();
-        }
-    }
-
-    function showView(viewName) {
-        configView.style.display = "none";
-        workflowView.style.display = "none";
-
-        if (viewName === "config") {
-            configView.style.display = "block";
-        } else if (viewName === "workflow") {
-            workflowView.style.display = "block";
-            // Populate customer name
-            const customer = localStorage.getItem(CUSTOMER_KEY);
-            document.getElementById("customer-name-display").textContent = customer || "N/A";
-        }
-    }
-
-    function log(message, type = "info") {
-        const entry = document.createElement("div");
-        entry.className = `log-entry log-${type}`;
-        
-        const timestamp = new Date().toLocaleTimeString();
-        entry.innerHTML = `<span class="log-time">${timestamp}</span> <span class="log-msg">${message}</span>`;
-        
-        logEntries.appendChild(entry);
-        logContainer.scrollTop = logContainer.scrollHeight; // Auto-scroll
-    }
-
-    function startStatusPolling() {
-        if (pollIntervalId) {
-            clearInterval(pollIntervalId);
-        }
-        pollWorkflowStatus(); // Poll immediately
-        pollIntervalId = setInterval(pollWorkflowStatus, POLLING_INTERVAL_MS);
-    }
-
-    function stopStatusPolling() {
-        if (pollIntervalId) {
-            clearInterval(pollIntervalId);
-            pollIntervalId = null;
-        }
-    }
-
-    function formatDate(date) {
-        return date.toLocaleString(undefined, {
-            year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
-        });
-    }
-
-    // --- Inventory Polling (from your original file) ---
-    async function pollStockStatus() {
         try {
-            // This is a mock API, replace with a real one if you have it
-            // const response = await fetch("http://localhost:3031/inventory/SW-ARL");
-            // const data = await response.json();
-            
-            // Mocking data for the demo
-            const data = {
-                warehouseId: "SW-ARL",
-                stock: Math.floor(Math.random() * 50) + 10, // Random stock
-                lastUpdated: new Date().toISOString()
-            };
+            // Send the signal to the backend
+            await fetch(`${API_BASE_URL}/api/signal/lab/${currentWorkflowId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(decisionData)
+            });
 
-            inventoryDisplay.innerHTML = `
-                <strong>${data.stock}</strong> units available
-                <span class="stock-updated">Updated: ${new Date(data.lastUpdated).toLocaleTimeString()}</span>
-            `;
-            inventoryDisplay.classList.toggle('low-stock', data.stock < 20);
-        } catch (err) {
-            inventoryDisplay.innerHTML = "Stock status unavailable";
-            inventoryDisplay.classList.add('low-stock');
+            log("✅ Decision confirmed. Resuming workflow...", 'success');
+            startStatusPolling(); // Resume polling
+
+        } catch (error) {
+            log(`Failed to send signal: ${error.message}`, 'error');
         }
+    }
+
+
+    function clearWorkflowState(fullReset = true) {
+        localStorage.removeItem("delivery_date");
+        localStorage.removeItem(WORKFLOW_ID_KEY);
+        currentWorkflowId = null;
+        stopStatusPolling();
+        if (fullReset) {
+            sessionStorage.removeItem(SCENARIO_KEY);
+        }
+    }
+
+    function resetWorkflow() {
+        log("Resetting simulation...");
+        clearWorkflowState(true);
+
+        retryButton.style.display = "none";
+        modalOverlay.style.display = "none";
+        labModalOverlay.style.display = "none";
+        logOutput.innerHTML = "";
+        log("Waiting to start...");
+        updateUI(-1);
+        deliveryDateEl.textContent = "...";
+
+        showView("config");
+    }
+
+    // --- Inventory Polling Functions (Unchanged Simulation) ---
+
+    async function pollStockStatus() {
+        let stockLevel = parseInt(localStorage.getItem('current_stock_level') || '95');
+        if (Math.random() > 0.7) {
+            stockLevel = Math.max(0, stockLevel - Math.floor(Math.random() * 2)); 
+            localStorage.setItem('current_stock_level', stockLevel.toString());
+        }
+        let demandStatus = 'NORMAL';
+        if (stockLevel <= 20) { demandStatus = 'HIGH'; } 
+        else if (stockLevel <= 50) { demandStatus = 'MEDIUM'; }
+        updateInventoryDisplay(stockLevel, demandStatus);
     }
 
     function initializeInventoryPolling() {
-        pollStockStatus(); // Poll immediately
-        setInterval(pollStockStatus, 5000); // Poll stock every 5s
+        console.log('Initializing inventory polling simulation...');
+        pollStockStatus();
+        setInterval(pollStockStatus, 5000);
+    }
+
+    function updateInventoryDisplay(stockLevel, demandStatus) {
+        const display = document.getElementById('inventory-display');
+        if (!display) return;
+        let statusColor = '#05d9a0';
+        let stockText = `${stockLevel}/100`;
+        if (stockLevel === 'ERROR' || stockLevel === 'OFFLINE') {
+            statusColor = '#ff5e5e'; stockText = stockLevel;
+        } else if (stockLevel <= 20) { statusColor = '#ff5e5e'; }
+        else if (demandStatus === 'HIGH' || stockLevel <= 50) { statusColor = '#ffc107'; }
+        display.innerHTML = `
+            <span style="color: ${statusColor}">Current Stock: ${stockText}</span><br>
+            <span style="color: ${statusColor}">Demand: ${demandStatus}</span>`;
+        localStorage.setItem('current_stock_level', stockLevel.toString());
+        localStorage.setItem('current_demand_status', demandStatus);
+    }
+
+    function decrementStock(units = 1) {
+        let currentStock = parseInt(localStorage.getItem('current_stock_level') || '100');
+        currentStock = Math.max(0, currentStock - units);
+        localStorage.setItem('current_stock_level', currentStock.toString());
+        updateInventoryDisplay(currentStock, localStorage.getItem('current_demand_status') || 'NORMAL');
     }
 
     // --- Event Listeners ---
-    // View 1: Config
-    configForm.addEventListener("submit", startWorkflow);
 
-    // View 2: Workflow
-    // --- THIS BLOCK IS NOW FIXED ---
-    if (retryButton) {
-        retryButton.addEventListener("click", resetWorkflow); // "Start a New Order"
-    }
-    if (resetButton) {
-        resetButton.addEventListener("click", resetWorkflow); // "Reset (Simulate Crash)"
-    }
+    document.getElementById("config-form").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const selectedRadio = document.querySelector('input[name="scenario"]:checked');
+        const scenarioId = selectedRadio.value;
+        const scenarioInfo = scenarios[scenarioId];
+        sessionStorage.setItem(SCENARIO_KEY, scenarioId);
+        document.getElementById("product-name-summary").textContent = scenarioInfo.name;
+        document.getElementById("product-price-summary").textContent = " " + scenarioInfo.price;
+        document.getElementById("product-price-total").textContent = " " + scenarioInfo.price;
+        showView("checkout");
+    });
 
-    // View 3: Modal
-    confirmInterventionButton.addEventListener("click", resumeWithManualInput);
-
-
-    // --- Initialization ---
-    function initialize() {
-        currentWorkflowId = localStorage.getItem(WORKFLOW_ID_KEY);
-
-        if (currentWorkflowId) {
-            log("Discovered an ongoing workflow. Resuming...", "warn");
+    document.getElementById("pay-button").addEventListener("click", () => {
+        if (document.getElementById("checkout-form").checkValidity()) {
             showView("workflow");
-            
+            startWorkflow();
+        } else {
+            alert("Please fill in all required fields.");
+        }
+    });
+
+    retryButton.addEventListener("click", startWorkflow);
+    resetButton.addEventListener("click", resetWorkflow);
+    confirmInterventionButton.addEventListener("click", resumeWithManualInput);
+    confirmLabButton.addEventListener("click", resumeFromLabInput);
+
+
+    // --- Initialization on page load ---
+    function initialize() {
+        const existingWorkflowId = localStorage.getItem(WORKFLOW_ID_KEY);
+        const scenario = sessionStorage.getItem(SCENARIO_KEY);
+
+        if (existingWorkflowId && scenario) {
+            log("Detected an ongoing workflow. Querying status...", 'warn');
+            showView("workflow");
+            currentWorkflowId = existingWorkflowId;
+
             const savedDate = localStorage.getItem("delivery_date");
             if (savedDate) {
                 deliveryDateEl.textContent = formatDate(new Date(savedDate));
             }
             
-            startStatusPolling(); // Start polling for status
+            // Just start polling. The poll function will handle the UI
+            // and show the modal if necessary.
+            startStatusPolling();
+            pollWorkflowStatus(); // Poll immediately on load
         } else {
             // Fresh start
+            clearWorkflowState(true);
             showView("config");
-            clearWorkflowState(false); // Ensure clean state
         }
-
-        // Always start inventory polling
-        initializeInventoryPolling();
     }
 
+    // --- Start ---
+    initializeInventoryPolling();
     initialize();
 });

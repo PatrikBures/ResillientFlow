@@ -3,31 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mysteryboxes Inc. - Global Order</title>
+    <title>Mysteryboxes Inc. - Global Logistics Simulator</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <header class="site-header">
-        <div class="header-content">
-            <h1><span class="logo-emoji">🔮</span> Mysteryboxes Inc.</h1>
-            <p>Global Logistics Simulation (Powered by Temporal)</p>
-        </div>
-        <div id="inventory-status" class="inventory-widget">
-            <div class="inventory-header">📦 Swedish Warehouse</div>
-            <div id="inventory-display">Loading stock status...</div>
-        </div>
+    <header>
+        <h1><span class="logo-emoji">🔮</span> Mysteryboxes Inc.</h1>
+        <p>Global Logistics Simulation (Powered by Temporal)</p>
     </header>
 
+    <div id="inventory-status" class="inventory-widget">
+        <div class="inventory-header">📦 Swedish Warehouse</div>
+        <div id="inventory-display">Loading stock status...</div>
+    </div>
+
     <main>
-        <!-- VIEW 1: CONFIGURATION -->
         <div id="config-view" class="view">
             <h2>Choose Your Mysterybox</h2>
             <p>Each box simulates a unique global logistics flow.</p>
-            
-            <!-- Updated: Added class for better grid layout -->
-            <form id="config-form" class="config-form-grid">
+            <form id="config-form">
 
                 <div class="form-group-radio">
                     <input type="radio" id="scenario-estonia-ok" name="scenario" value="ESTONIA_OK" checked>
@@ -38,144 +34,206 @@
                 </div>
 
                 <div class="form-group-radio">
-                    <input type="radio" id="scenario-china-fail" name="scenario" value="CHINA_CUSTOMS_FAIL">
-                    <label for="scenario-china-fail">
-                        🇨🇳 The "Far East" Box ($199)
-                        <span><b>Scenario:</b> Failure at customs. Manual intervention.</span>
+                    <input type="radio" id="scenario-china-customs" name="scenario" value="CHINA_CUSTOMS_FAIL">
+                    <label for="scenario-china-customs">
+                        🌏 The "Far East" Box ($199)
+                        <span><b>Scenario:</b> Customs issues. Stuck at customs, resolves after automatic retry.</span>
                     </label>
                 </div>
 
                 <div class="form-group-radio">
-                    <input type="radio" id="scenario-estonia-fail" name="scenario" value="ESTONIA_FAIL_REROUTE">
-                    <label for="scenario-estonia-fail">
-                        📦 The "Volatile Stock" Box ($149)
-                        <span><b>Scenario:</b> Warehouse failure. Manual intervention.</span>
+                    <input type="radio" id="scenario-reroute" name="scenario" value="ESTONIA_FAIL_REROUTE">
+                    <label for="scenario-reroute">
+                        🔄 The "Volatile Stock" Box ($149)
+                        <span><b>Scenario:</b> Warehouse Error & Rerouting. Stock in Estonia is 0. Flow automatically redirects order to China factory.</span>
                     </label>
                 </div>
 
                 <div class="form-group-radio">
-                    <input type="radio" id="scenario-china-crisis" name="scenario" value="CHINA_CRISIS_FAIL">
-                    <label for="scenario-china-crisis">
-                        🔥 The "Warzone" Box ($499)
-                        <span><b>Scenario:</b> Geopolitical failure. Total loss.</span>
+                    <input type="radio" id="scenario-crisis" name="scenario" value="CHINA_CRISIS_FAIL">
+                    <label for="scenario-crisis">
+                        🚨 The "High Risk" Box ($499)
+                        <span><b>Scenario:</b> Geopolitical crisis. Transport route blocked. Requires <u>human intervention</u> for resolution.</span>
                     </label>
                 </div>
 
-                <div class="form-group">
-                    <label for="customer-name">Your Name</label>
-                    <input type="text" id="customer-name" name="customer-name" placeholder="E.g., Alva Carlsson" required>
+                <div class="form-group-radio">
+                    <input type="radio" id="scenario-lab-fail" name="scenario" value="LAB_FAIL_SCREWS">
+                    <label for="scenario-lab-fail">
+                        🔩 The "High-Spec" Box ($399)
+                        <span><b>Scenario:</b> Lab inspection failure on a critical component (screws). Requires <u>human intervention</u> from management.</span>
+                    </label>
                 </div>
 
-                <button id="start-workflow-button" class="btn-gradient" type="submit">Start Order</button>
+                <div class="form-group-radio">
+                    <input type="radio" id="scenario-delay" name="scenario" value="SHIPPING_DELAY">
+                    <label for="scenario-delay">
+                        ⏰ The "Rush Order" Box ($349)
+                        <span><b>Scenario:</b> Shipping congestion detected. System automatically upgrades to express shipping (+$50 surcharge).</span>
+                    </label>
+                </div>
+
+                <div class="form-group-radio">
+                    <input type="radio" id="scenario-quality" name="scenario" value="QUALITY_FAIL">
+                    <label for="scenario-quality">
+                        🔍 The "Premium Quality" Box ($299)
+                        <span><b>Scenario:</b> Quality inspection failure. Automatic product recall and replacement with certified batch.</span>
+                    </label>
+                </div>
+
+                <div class="form-group-radio">
+                    <input type="radio" id="scenario-carrier" name="scenario" value="CARRIER_BANKRUPTCY">
+                    <label for="scenario-carrier">
+                        💸 The "Budget Shipping" Box ($129)
+                        <span><b>Scenario:</b> Shipping carrier bankruptcy. Automatic switch to alternative carrier with cost adjustment.</span>
+                    </label>
+                </div>
+
+                <div class="form-group-radio">
+                    <input type="radio" id="scenario-currency" name="scenario" value="CURRENCY_VOLATILITY">
+                    <label for="scenario-currency">
+                        💱 The "International Value" Box ($259)
+                        <span><b>Scenario:</b> Currency exchange rate volatility. Payment automatically adjusted to protect margins.</span>
+                    </label>
+                </div>
+
+                <button type="submit" class="btn-gradient">Proceed to Checkout</button>
             </form>
         </div>
 
-        <!-- VIEW 2: WORKFLOW MONITORING (now includes the log) -->
-        <div id="workflow-view" class="view" style="display: none;">
-            <div class="workflow-header">
-                <h2>Your order is in progress, <span id="customer-name-display">Alva</span>!</h2>
-                <p>Follow the steps below. This flow is durable and will resume even if you close this window.</p>
-            </div>
-
-            <div id="workflow-steps" class="workflow-steps-container">
-                <div class="workflow-step" id="step-1">
-                    <div class="step-icon">📦</div>
-                    <div class="step-name">Order Received</div>
-                </div>
-                <div class="step-connector"></div>
-                <div class="workflow-step" id="step-2">
-                    <div class="step-icon">💳</div>
-                    <div class="step-name">Payment OK</div>
-                </div>
-                <div class="step-connector"></div>
-                <div class="workflow-step" id="step-3">
-                    <div class="step-icon">🏭</div>
-                    <div class="step-name">Warehouse Allocation</div>
-                </div>
-                <!-- Intervention Step (managed by JS) -->
-                <div class="step-connector" id="step-i-conn" style="display: none;"></div>
-                <div class="workflow-step step-intervention" id="step-i" style="display: none;">
-                    <div class="step-icon">⚠️</div>
-                    <div class="step-name">Intervention Required</div>
-                </div>
-                <div class="step-connector"></div>
-                <div class="workflow-step" id="step-4">
-                    <div class="step-icon">🎁</div>
-                    <div class="step-name">Packaged (Factory)</div>
-                </div>
-                <div class="step-connector"></div>
-                <div class="workflow-step" id="step-5">
-                    <div class="step-icon">✈️</div>
-                    <div class="step-name">Transport Started</div>
-                </div>
-                <div class="step-connector"></div>
-                <div class="workflow-step" id="step-6">
-                    <div class="step-icon">🛂</div>
-                    <div class="step-name">Customs Clearance</div>
-                </div>
-                <div class="step-connector"></div>
-                <div class="workflow-step" id="step-7">
-                    <div class="step-icon">🚚</div>
-                    <div class="step-name">Local Delivery</div>
-                </div>
-                <div class="step-connector"></div>
-                <div class="workflow-step" id="step-8">
-                    <div class="step-icon">✅</div>
-                    <div class="step-name">Delivered</div>
-                </div>
-                <!-- Failure Step (managed by JS) -->
-                <div class="step-connector" id="step-f-conn" style="display: none;"></div>
-                <div class="workflow-step step-failed" id="step-f" style="display: none;">
-                    <div class="step-icon">❌</div>
-                    <div class="step-name">Workflow Failed</div>
-                </div>
-            </div>
-
-            <div class="workflow-summary">
-                <strong>Expected Delivery:</strong> <span id="delivery-date">Pending...</span>
-            </div>
-
-            <div class="workflow-controls">
-                <button id="start-again-button" class="btn-secondary" style="display: none;">Start a New Order</button>
-                <button id="reset-button" class="btn-secondary btn-danger">Reset (Simulate Crash)</button>
-            </div>
-
-            <!-- LOG VIEW IS NOW HERE -->
-            <div id="log-view" class="log-widget">
-                <div class="log-header">
-                    <h3>Workflow Log</h3>
-                </div>
-                <div id="log-container" class="log-container">
-                    <div id="log-entries">
-                        <div class="log-entry log-info">
-                            <span class="log-time">12:00:01</span>
-                            <span class="log-msg">Welcome to the simulation. Please configure your order.</span>
-                        </div>
+        <div id="checkout-view" class="view" style="display: none;">
+            <h2>Checkout</h2>
+            <p>Your order is almost ready.</p>
+            <div class="checkout-container">
+                <form id="checkout-form">
+                    <h3>Delivery Details</h3>
+                    <div class="form-group"><label for="name">Name</label><input type="text" id="name" value="John Doe" required></div>
+                    <div class="form-group"><label for="email">Email</label><input type="email" id="email" value="john@example.com" required></div>
+                    <div class="form-group"><label for="address">Address</label><input type="text" id="address" value="123 Main Street" required></div>
+                </form>
+                <div class="summary-box">
+                    <h3>Your Order</h3>
+                    <div class="product">
+                        <span id="product-name-summary">...</span>
+                        $<span id="product-price-summary">...</span>
                     </div>
+                    <hr>
+                    <div class="total"><span>Total</span>$<span id="product-price-total">...</span></div>
+                    <button id="pay-button" class="btn-gradient" type="button">Pay Now</button>
                 </div>
+            </div>
+        </div>
+
+        <div id="workflow-view" class="view" style="display: none;">
+            <h2>Order Status</h2>
+            <div id="delivery-date-wrapper">
+                Estimated delivery date: <span id="delivery-date">...</span>
+            </div>
+
+            <div class="workflow-container">
+                <ul class="workflow-steps">
+                    <li class="step" id="step-1"><div class="step-icon">📦</div><div class="step-label">Order Received</div></li>
+                    <li class="step" id="step-2"><div class="step-icon">💳</div><div class="step-label">Payment OK</div></li>
+                    <li class="step" id="step-3"><div class="step-icon">🗺️</div><div class="step-label">Warehouse Allocation</div></li>
+                    <li class="step" id="step-4"><div class="step-icon">🏭</div><div class="step-label">Packaged (Factory)</div></li>
+                    <li class="step" id="step-5"><div class="step-icon">✈️</div><div class="step-label">Transport Started</div></li>
+                    <li class="step" id="step-6"><div class="step-icon">🛂</div><div class="step-label">Customs Clearance</div></li>
+                    <li class="step" id="step-7"><div class="step-icon">🚚</div><div class="step-label">Local Delivery</div></li>
+                    <li class="step" id="step-8"><div class="step-icon">🏠</div><div class="step-label">Delivered</div></li>
+                </ul>
+            </div>
+
+            <div class="controls">
+                <button id="retryButton">Retry</button>
+                <button id="resetButton">Start New Order</button>
+            </div>
+
+            <div id="status-log-wrapper">
+                <h3>Status Log:</h3>
+                <pre id="log-output">Waiting to start...</pre>
             </div>
         </div>
     </main>
 
-    <!-- MODAL (Unchanged, but still here) -->
-    <div id="modal-overlay" class="modal-overlay" style="display: none;">
-        <div id="intervention-modal" class="modal">
+    <div id="intervention-modal-overlay" style="display: none;">
+        <div id="intervention-modal">
             <div class="modal-header">
-                <h3><span class="logo-emoji">⚠️</span> Manual Intervention Required</h3>
-                <span id="modal-title">Error: NO_STOCK_ESTONIA</span>
+                <h3><span class="logo-emoji">📩</span> Incoming Alert from Temporal</h3>
+                <span>TO: Logistics Team</span>
             </div>
             <div class="modal-body">
-                <p id="modal-message">No stock in Tallinn warehouse for 'Volatile Stock' Box. Please select an alternative solution to resume the workflow.</p>
-                <form id="intervention-form" class="intervention-form">
-                    <!-- Options will be dynamically populated by scripts.js -->
+                <p><strong>CRITICAL ERROR:</strong> Order <span class="order-id">XYZ-123</span> has been affected by a blocked transport route (Geopolitical crisis).</p>
+                <p>The workflow is <strong>paused</strong> awaiting human decision. How do you want to proceed?</p>
+
+                <form id="intervention-form">
+                    <div class="intervention-choice">
+                        <input type="radio" id="choice-swe" name="solution" value="SWEDEN" data-cost="30" data-days="2" checked>
+                        <label for="choice-swe">
+                            <strong>Reroute to Central Warehouse (Arlanda, Sweden)</strong>
+                            <span>Estimated cost increase: +30%. Delivery time: 2 days.</span>
+                        </label>
+                    </div>
+                    <div class="intervention-choice">
+                        <input type="radio" id="choice-ger" name="solution" value="GERMANY" data-cost="15" data-days="5">
+                        <label for="choice-ger">
+                            <strong>Use alternative manufacturer (Berlin, Germany)</strong>
+                            <span>Estimated cost increase: +15%. Delivery time: 5 days.</span>
+                        </label>
+                    </div>
+                    <div class="intervention-choice">
+                        <input type="radio" id="choice-vtn" name="solution" value="VIETNAM" data-cost="5" data-days="14">
+                        <label for="choice-vtn">
+                            <strong>Use alternative manufacturer (Hanoi, Vietnam)</strong>
+                            <span>Estimated cost increase: +5%. Delivery time: 14 days.</span>
+                        </label>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button id="confirm-intervention-button" class="btn-gradient">Implement & Resume Flow</button>
+                <button id="confirm-intervention-button" class="btn-gradient" type="button">Implement & Resume Flow</button>
             </div>
         </div>
     </div>
 
+    <div id="lab-modal-overlay" style="display: none;">
+        <div id="lab-modal">
+            <div class="modal-header">
+                <h3><span class="logo-emoji">🔬</span> Incoming Alert from Temporal</h3>
+                <span>TO: Management & Quality Assurance</span>
+            </div>
+            <div class="modal-body">
+                <p><strong>CRITICAL FAILURE:</strong> Order <span class="order-id">XYZ-123</span>. The screw batch 'Batch 77-B' has <strong>failed</strong> the lab's material composition inspection (Zinc coating non-compliant).</p>
+                <p>The workflow is <strong>paused</strong> at QA. How do you want to proceed?</p>
+
+                <form id="lab-form">
+                    <div class="intervention-choice">
+                        <input type="radio" id="choice-shutdown" name="solution" value="SHUTDOWN" data-cost="15" data-delay="24" checked>
+                        <label for="choice-shutdown">
+                            <strong>Complete Shutdown & Recall (Est. $15M)</strong>
+                            <span>Halt all production lines using this batch. Recall units. Estimated delay: 24 weeks.</span>
+                        </label>
+                    </div>
+                    <div class="intervention-choice">
+                        <input type="radio" id="choice-europe" name="solution" value="EUROPE_SUPPLIER" data-cost="7" data-delay="3">
+                        <label for="choice-europe">
+                            <strong>Order from EU Supplier (Est. $7M)</strong>
+                            <span>Scrap the faulty batch. Place emergency order with certified German supplier. Estimated delay: 3 weeks.</span>
+                        </label>
+                    </div>
+                    <div class="intervention-choice">
+                        <input type="radio" id="choice-as-is" name="solution" value="USE_AS_IS" data-cost="0" data-delay="0" data-risk="50">
+                        <label for="choice-as-is">
+                            <strong>Use 'As-Is' & Ship (Initial Cost: $0)</strong>
+                            <span>Bypass QA failure and use the non-compliant screws. Ships on time. Accepts high risk of future product recall (Est. $50M liability).</span>
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="confirm-lab-button" class="btn-gradient" type="button">Confirm Decision & Resume</button>
+            </div>
+        </div>
+    </div>
     <script src="scripts.js"></script>
 </body>
 </html>
