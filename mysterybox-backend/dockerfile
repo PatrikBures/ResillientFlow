@@ -1,0 +1,20 @@
+# Stage 1: Build the TypeScript code
+FROM node:18-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+# Stage 2: Production image
+# Use a slim base image
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+# Install only production dependencies
+RUN npm install --omit=dev 
+# Copy the compiled JS from the build stage
+COPY --from=builder /app/dist ./dist
+
+# Default command (will be overridden by docker-compose)
+CMD ["node", "dist/worker.js"]

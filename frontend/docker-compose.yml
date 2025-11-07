@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # 1. The Temporal Server
+  temporal:
+    image: temporalio/auto-setup:latest
+    ports:
+      - "7233:7233" # gRPC port for worker/api
+      - "8233:8233" # Web UI port
+    environment:
+      - DB=sqlite3
+      - TEMPORAL_NAMESPACE=default
+    volumes:
+      - temporal_db:/var/lib/sqlite3
+
+  # 2. The Frontend (Nginx)
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "8080:80" # Access the UI at http://localhost:8080
+
+  # 3. The Backend API Server
+  api:
+    build:
+      context: ./mysterybox-backend
+    # This command overrides the Dockerfile's CMD
+    command: node dist/server.js
+    ports:
+      - "5000:5000" # Expose the API at http://localhost:5000
+    depends_on:
+      - temporal
+    environment:
+      # Tells the client where to find Temporal (using the service name)
+      - TEMPORAL_GRPC_ENDPOINT=temporal:7233
+
+  # 4. The Backend Worker
+  worker:
+    build:
+      context: ./mysterybox-backend
+    # This command uses the default "node dist/worker.js" (or you can specify)
+    command: node dist/worker.js
+    depends_on:
+      - temporal
+    environment:
+      # Tells the worker where to find Temporal
+      - TEMPORAL_GRPC_ENDPOINT=temporal:7233
+
+volumes:
+  temporal_db:
+```
+
+---
+
+### How to Run Your Application
+
+You only need **one command** now. From your root `ResillientFlow` directory (where `docker-compose.yml` is):
+
+```bash
+docker-compose up --build

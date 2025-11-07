@@ -1,0 +1,10 @@
+**/node_modules/
+**/dist/
+**/build/
+**/.env
+*.log
+.DS_Store
+temporal_db/
+.DS_Store thumbnails/
+.vscode/
+.idea/
