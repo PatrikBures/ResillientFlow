@@ -1,10 +1,28 @@
+# Dependencies
 **/node_modules/
+
+# Compiled Code & Build Artifacts
 **/dist/
 **/build/
-**/.env
+
+# Logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment Variables
+# Ignore all .env files, which contain secrets
+.env
+.env.*
+# But DO commit an example file (this is a best-practice exception)
+!.env.example
+
+# OS / IDE Files
 .DS_Store
-temporal_db/
-.DS_Store thumbnails/
 .vscode/
 .idea/
+Thumbs.db
+
+# Local Data
+temporal_db/

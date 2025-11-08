@@ -12,8 +12,8 @@
   },
   "dependencies": {
     "@temporalio/activity": "^1.13.1",
-    "@temporalio/client": "^1.8.6",
-    "@temporalio/worker": "^1.8.6",
+    "@temporalio/client": "^1.13.1",
+    "@temporalio/worker": "^1.13.1",
     "cors": "^2.8.5",
     "express": "^4.18.2"
   },
