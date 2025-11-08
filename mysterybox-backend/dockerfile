@@ -1,18 +1,27 @@
 # Stage 1: Build the TypeScript code
-FROM node:18-alpine AS builder
+FROM node:18-slim AS builder
 WORKDIR /app
-COPY package*.json ./
-RUN npm install
+
+# Copy package.json AND package-lock.json
+COPY package.json package-lock.json ./
+
+# Install ALL dependencies (including dev)
+RUN npm ci
+
+# Copy the rest of the source code
 COPY . .
 RUN npm run build
 
 # Stage 2: Production image
-# Use a slim base image
-FROM node:18-alpine
+FROM node:18-slim
 WORKDIR /app
-COPY package*.json ./
-# Install only production dependencies
-RUN npm install --omit=dev 
+
+# Copy package.json AND package-lock.json
+COPY package.json package-lock.json ./
+
+# Install ONLY production dependencies
+RUN npm ci --omit=dev
+
 # Copy the compiled JS from the build stage
 COPY --from=builder /app/dist ./dist
 
