@@ -4,7 +4,7 @@ tools:
     run:
       - tool: polytope/container
         args:
-          image: node:18-alpine
+          image: node:18-slim
           id: api
           restart:
             policy: on-failure
