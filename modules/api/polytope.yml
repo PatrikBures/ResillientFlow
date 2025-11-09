@@ -1,0 +1,22 @@
+services:
+  api:
+    image: node:18-alpine
+    mounts:
+      - path: /app
+        source:
+          type: host
+          path: ../../mysterybox-backend
+    workdir: /app
+    ports:
+      - target: 5000
+        published: 5000
+    env:
+      TEMPORAL_GRPC_ENDPOINT: temporal:7233
+    cmd:
+      - sh
+      - -c
+      - "npm install && npm run build && node dist/server.js"
+    depends-on:
+      - temporal
+    labels:
+      description: "Backend API server for logistics workflow orchestration"
