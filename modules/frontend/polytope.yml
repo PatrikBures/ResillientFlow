@@ -16,5 +16,5 @@ tools:
             - path: /usr/share/nginx/html
               source:
                 type: host
-                path: ../../frontend
+                path: frontend
           create: when-missing

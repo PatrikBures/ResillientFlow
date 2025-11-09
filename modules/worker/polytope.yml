@@ -12,7 +12,7 @@ tools:
             - path: /app
               source:
                 type: host
-                path: ../../mysterybox-backend
+                path: mysterybox-backend
           workdir: /app
           env:
             - {name: TEMPORAL_GRPC_ENDPOINT, value: "temporal:7233"}
