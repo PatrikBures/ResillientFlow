@@ -1,19 +1,23 @@
-services:
+tools:
   worker:
-    image: node:18-alpine
-    mounts:
-      - path: /app
-        source:
-          type: host
-          path: ../../mysterybox-backend
-    workdir: /app
-    env:
-      TEMPORAL_GRPC_ENDPOINT: temporal:7233
-    cmd:
-      - sh
-      - -c
-      - "npm install && npm run build && node dist/worker.js"
-    depends-on:
-      - temporal
-    labels:
-      description: "Temporal worker for processing workflow tasks"
+    info: "Runs the Temporal worker for processing workflow tasks"
+    run:
+      - tool: polytope/container
+        args:
+          image: node:18-alpine
+          id: worker
+          restart:
+            policy: on-failure
+          mounts:
+            - path: /app
+              source:
+                type: host
+                path: ../../mysterybox-backend
+          workdir: /app
+          env:
+            - {name: TEMPORAL_GRPC_ENDPOINT, value: "temporal:7233"}
+          cmd:
+            - sh
+            - -c
+            - "npm install && npm run build && node dist/worker.js"
+          create: when-missing

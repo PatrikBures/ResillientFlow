@@ -1,13 +1,20 @@
-services:
+tools:
   frontend:
-    image: nginx:1.25-alpine
-    mounts:
-      - path: /usr/share/nginx/html
-        source:
-          type: host
-          path: ../../frontend
-    ports:
-      - target: 80
-        published: 8080
-    labels:
-      description: "Frontend web application serving static HTML/CSS/JS files"
+    info: "Runs the frontend web application serving static HTML/CSS/JS files"
+    run:
+      - tool: polytope/container
+        args:
+          image: nginx:1.25-alpine
+          id: frontend
+          restart:
+            policy: on-failure
+          services:
+            - id: frontend
+              ports:
+                - {protocol: http, port: 80, expose-as: 8080}
+          mounts:
+            - path: /usr/share/nginx/html
+              source:
+                type: host
+                path: ../../frontend
+          create: when-missing
