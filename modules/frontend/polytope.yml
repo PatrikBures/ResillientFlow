@@ -1,0 +1,13 @@
+services:
+  frontend:
+    image: nginx:1.25-alpine
+    mounts:
+      - path: /usr/share/nginx/html
+        source:
+          type: host
+          path: ../../frontend
+    ports:
+      - target: 80
+        published: 8080
+    labels:
+      description: "Frontend web application serving static HTML/CSS/JS files"
