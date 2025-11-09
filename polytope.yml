@@ -3,10 +3,15 @@ include:
   - modules/server
   - modules/temporal
   - modules/postgres
+  - modules/frontend
+  - modules/api
+  - modules/worker
 tools:
   default:
     run:
-      - tool: "server"
       - tool: "temporal"
       - tool: "temporal-ui"
       - tool: "postgres"
+      - tool: "frontend"
+      - tool: "api"
+      - tool: "worker"
